@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DerivAI Trader - Dashboard</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .dashboard {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .welcome-text {
+            color: #0ff;
+            text-shadow: 0 0 10px #0ff;
+        }
+        #logoutBtn {
+            width: auto;
+            padding: 8px 20px;
+        }
+        .user-info {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #0ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <h1 class="welcome-text">Welcome to DerivAI Trader</h1>
+            <button class="btn" id="logoutBtn" onclick="logout()">Logout</button>
+        </div>
+        <div id="userInfo" class="user-info"></div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        // Check if user is authenticated
+        if (!isAuthenticated()) {
+            window.location.href = 'index.html';
+        }
+
+        // Fetch and display user info
+        async function fetchUserInfo() {
+            try {
+                const response = await fetch(`${API_URL}/users/me`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+
+                if (response.status === 401) {
+                    // Try to refresh token
+                    const newToken = await refreshToken();
+                    if (!newToken) {
+                        throw new Error('Session expired. Please login again.');
+                    }
+                    // Retry with new token
+                    return fetchUserInfo();
+                }
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch user info');
+                }
+
+                const user = await response.json();
+                document.getElementById('userInfo').innerHTML = `
+                    <h2>User Information</h2>
+                    <p><strong>Email:</strong> ${user.email}</p>
+                    <p><strong>Phone:</strong> ${user.phone_number}</p>
+                    <p><strong>Status:</strong> ${user.is_verified ? 'Verified' : 'Pending Verification'}</p>
+                `;
+            } catch (error) {
+                console.error('Error fetching user info:', error);
+                if (error.message.includes('Session expired')) {
+                    logout();
+                }
+            }
+        }
+
+        fetchUserInfo();
+    </script>
+</body>
+</html> 
