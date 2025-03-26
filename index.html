@@ -1,196 +1,232 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Trading Prediction System</title>
-    <style>
-        body {
-            background: transparent;
-            font-family: Arial, sans-serif;
-        }
-        .trade-box {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(0, 0, 0, 0.9);
-            color: #fff;
-            padding: 15px;
-            border-radius: 10px;
-            border: 2px solid #00ff00;
-            font-size: 16px;
-        }
-        .trade-status {
-            font-weight: bold;
-            color: yellow;
-            animation: blink 1s infinite alternate;
-        }
-        @keyframes blink {
-            from { opacity: 1; }
-            to { opacity: 0.5; }
-        }
-        select, button, input {
-            margin-top: 5px;
-            padding: 5px;
-            font-size: 14px;
-        }
-        .consoles-container {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            width: 95%;
-            display: flex;
-            justify-content: space-between;
-        }
-        .ai-console, .trade-log, .strategy-console {
-            background: rgba(0, 0, 0, 0.9);
-            color: #00ff00;
-            padding: 10px;
-            font-size: 14px;
-            border-radius: 5px;
-            overflow-y: auto;
-            height: 80px;
-            border: 2px solid #00ff00;
-            width: 32%;
-        }
-    </style>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Deriv AI Trader</title>
+    <!-- Favicon icon -->
+    <link rel="icon" type="image/png" sizes="16x16" href="./images/favicon.png">
+    <!-- Chartist -->
+    <link rel="stylesheet" href="./vendor/chartist/css/chartist.min.css">
+    <link href="./css/style.css" rel="stylesheet">
+
 </head>
-<body>
-    <div class="trade-box">
-        <label for="marketSelect">🔹 Select Market:</label>
-        <select id="marketSelect" onchange="updateTradeInfo()">
-            <option value="R_100">Volatility 100 Index</option>
-            <option value="R_75">Volatility 75 Index</option>
-            <option value="R_50">Volatility 50 Index</option>
-            <option value="BOOM_1000">Boom 1000 Index</option>
-            <option value="CRASH_500">Crash 500 Index</option>
-            <option value="STP">Step Index</option>
-        </select>
-        
-        <label for="tradeTypeSelect">📌 Select Trade Type:</label>
-        <select id="tradeTypeSelect">
-            <option value="rise_fall">Rise/Fall</option>
-            <option value="even_odd">Even/Odd</option>
-            <option value="over_under">Over/Under</option>
-        </select>
-        
-        <label for="tradeAmount">💰 Trade Amount:</label>
-        <input type="number" id="tradeAmount" value="1" min="0.35" step="0.01">
-        
-        <label for="targetProfit">🎯 Target Profit:</label>
-        <input type="number" id="targetProfit" value="10" min="1" step="0.01">
-        
-        <p>📊 <b>Current Price:</b> <span id="price">Loading...</span></p>
-        <p>⏳ <b>Time Left:</b> <span id="timer">5s</span></p>
-        <p>✅ <b>Status:</b> <span class="trade-status" id="trade-status">Waiting...</span></p>
-        <p>📌 <b>Entry Advice:</b> <span id="entry-advice">Analyzing...</span></p>
-        <p>📈 <b>Market Entry Probability:</b> <span id="market-probability">Calculating...</span>%</p>
-        <button onclick="toggleAutoTrade()">Auto Trade</button>
-    </div>
 
-    <div class="consoles-container">
-        <div class="strategy-console" id="strategy-console">
-            <p>Strategy Console: Initializing...</p>
-        </div>
-        
-        <div class="trade-log" id="trade-log">
-            <p>Trade Log: Waiting for data...</p>
-        </div>
-        
-        <div class="ai-console" id="ai-console">
-            <p>AI Console: Initializing...</p>
+<body class="bg-dark">
+
+    <!--*******************
+        Preloader start
+    ********************-->
+    <div id="preloader">
+        <div class="sk-three-bounce">
+            <div class="sk-child sk-bounce1"></div>
+            <div class="sk-child sk-bounce2"></div>
+            <div class="sk-child sk-bounce3"></div>
         </div>
     </div>
+    <!--*******************
+        Preloader end
+    ********************-->
 
+
+    <!--**********************************
+        Main wrapper start
+    ***********************************-->
+    <div id="main-wrapper">
+
+        <!--**********************************
+            Nav header start
+        ***********************************-->
+        <div class="nav-header">
+            <a href="index.html" class="brand-logo">
+                <img class="logo-abbr" src="./images/logo.png" alt="">
+                <img class="logo-compact" src="./images/logo-text.png" alt="">
+                <img class="brand-title" src="./images/logo-text.png" alt="">
+            </a>
+
+            <div class="nav-control">
+                <div class="hamburger">
+                    <span class="line"></span><span class="line"></span><span class="line"></span>
+                </div>
+            </div>
+        </div>
+        <!--**********************************
+            Nav header end
+        ***********************************-->
+
+        <!--**********************************
+            Header start
+        ***********************************-->
+        <div class="header bg-dark">
+            <div class="header-content">
+                <nav class="navbar navbar-expand">
+                    <div class="collapse navbar-collapse justify-content-between">
+                        <div class="header-left">
+                            <div class="search_bar dropdown">
+                                <span class="search_icon p-3 c-pointer" data-toggle="dropdown">
+                                    <i class="mdi mdi-magnify"></i>
+                                </span>
+                                <div class="dropdown-menu p-0 m-0">
+                                    <form>
+                                        <input class="form-control" type="search" placeholder="Search" aria-label="Search">
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <ul class="navbar-nav header-right">
+                            <li class="nav-item dropdown notification_dropdown">
+                                <a class="nav-link" href="#" role="button" data-toggle="dropdown">
+                                    <i class="mdi mdi-bell"></i>
+                                    <div class="pulse-css"></div>
+                                </a>
+                                <div class="dropdown-menu dropdown-menu-right">
+                                    <ul class="list-unstyled">
+                                        <li class="media dropdown-item">
+                                            <span class="success"><i class="ti-user"></i></span>
+                                            <div class="media-body">
+                                                <a href="#">
+                                                    <p><strong>Martin</strong> has added a <strong>customer</strong> Successfully
+                                                    </p>
+                                                </a>
+                                            </div>
+                                            <span class="notify-time">3:20 am</span>
+                                        </li>
+                                        <li class="media dropdown-item">
+                                            <span class="primary"><i class="ti-shopping-cart"></i></span>
+                                            <div class="media-body">
+                                                <a href="#">
+                                                    <p><strong>Jennifer</strong> purchased Light Dashboard 2.0.</p>
+                                                </a>
+                                            </div>
+                                            <span class="notify-time">3:20 am</span>
+                                        </li>
+                                        <li class="media dropdown-item">
+                                            <span class="danger"><i class="ti-bookmark"></i></span>
+                                            <div class="media-body">
+                                                <a href="#">
+                                                    <p><strong>Robin</strong> marked a <strong>ticket</strong> as unsolved.
+                                                    </p>
+                                                </a>
+                                            </div>
+                                            <span class="notify-time">3:20 am</span>
+                                        </li>
+                                        <li class="media dropdown-item">
+                                            <span class="primary"><i class="ti-heart"></i></span>
+                                            <div class="media-body">
+                                                <a href="#">
+                                                    <p><strong>David</strong> purchased Light Dashboard 1.0.</p>
+                                                </a>
+                                            </div>
+                                            <span class="notify-time">3:20 am</span>
+                                        </li>
+                                        <li class="media dropdown-item">
+                                            <span class="success"><i class="ti-image"></i></span>
+                                            <div class="media-body">
+                                                <a href="#">
+                                                    <p><strong> James.</strong> has added a<strong>customer</strong> Successfully
+                                                    </p>
+                                                </a>
+                                            </div>
+                                            <span class="notify-time">3:20 am</span>
+                                        </li>
+                                    </ul>
+                                    <a class="all-notification" href="#">See all notifications <i
+                                            class="ti-arrow-right"></i></a>
+                                </div>
+                            </li>
+                            <li class="nav-item dropdown header-profile">
+                                <a class="nav-link" href="#" role="button" data-toggle="dropdown">
+                                    <i class="mdi mdi-account bg-white"></i>
+                                </a>
+                                <div class="dropdown-menu dropdown-menu-right">
+                                    <a href="./app-profile.html" class="dropdown-item">
+                                        <i class="icon-user"></i>
+                                        <span class="ml-2">Profile </span>
+                                    </a>
+                                    <a href="./email-inbox.html" class="dropdown-item">
+                                        <i class="icon-envelope-open"></i>
+                                        <span class="ml-2">Inbox </span>
+                                    </a>
+                                    <a onclick="handleLogout()" class="dropdown-item">
+                                        <i class="icon-key"></i>
+                                        <span class="ml-2">Logout </span>
+                                    </a>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </nav>
+            </div>
+        </div>
+        <!--**********************************
+            Header end ti-comment-alt
+        ***********************************-->
+
+        <!--**********************************
+            Sidebar start
+        ***********************************-->
+        <div class="quixnav">
+            <div class="quixnav-scroll">
+                <ul class="metismenu" id="menu">
+                    <li class="nav-label first"></li>
+                    <li><a onclick="loadPage('dashboard.html')"><i class="icon icon-app-store"></i><span
+                        class="nav-text">Dashboard</span></a></li>
+                    <li class="nav-label first"></li>
+                </ul>
+            </div>
+        </div>
+        <!--**********************************
+            Sidebar end
+        ***********************************-->
+        <div id="content" class="content-body">
+            
+        </div>
+
+        <div class="footer">
+            <div class="copyright">
+                <p>Copyright ©2025</p>
+            </div>
+        </div>
+    </div>
+    <script src="./vendor/global/global.min.js"></script>
+    <script src="./js/quixnav-init.js"></script>
+    <script src="./js/custom.min.js"></script>
+    
+
+    <!-- Chart ChartJS plugin files -->
+    <script src="./vendor/chart.js/Chart.bundle.min.js"></script>
+    <!-- Chartist -->
+    <script src="./vendor/chartist/js/chartist.min.js"></script>
+    <script src="./vendor/chartist-plugin-tooltips/js/chartist-plugin-tooltip.min.js"></script>
+    <!-- Flot -->
+    <script src="./vendor/flot/jquery.flot.js"></script>
+    <script src="./vendor/flot/jquery.flot.pie.js"></script>
+    <script src="./vendor/flot/jquery.flot.resize.js"></script>
+    <script src="./vendor/flot-spline/jquery.flot.spline.min.js"></script>
+
+
+    <!-- Init file -->
+    <script src="./js/plugins-init/widgets-script-init.js"></script>
     <script>
-        let ws, autoTrade = false, totalProfit = 0;
-
-        function connectWebSocket(market) {
-            if (ws) ws.close();
-            ws = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=1089");
-            ws.onopen = () => ws.send(JSON.stringify({ "ticks": market }));
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                if (data.tick) {
-                    const latestPrice = parseFloat(data.tick.quote).toFixed(2);
-                    document.getElementById("price").textContent = latestPrice;
-                    generateEntryAdvice(latestPrice);
-                    calculateMarketProbability();
-                    if (autoTrade) executeTrade();
-                }
-            };
+        function loadPage(page) {
+            fetch(page)
+                .then(response => response.text())
+                .then(data => {
+                    let contentDiv = document.getElementById("content");
+                    contentDiv.innerHTML = data;
+                    populateDashboard(); // Call after content is loaded
+                    handleDerivCallback();
+                    checkAuth();
+                })
+                .catch(error => console.error("Error loading page:", error));
         }
-
-        function updateTradeInfo() {
-            connectWebSocket(document.getElementById("marketSelect").value);
-        }
-
-        function generateEntryAdvice(latestPrice) {
-            let priceStr = latestPrice.toString();
-            let lastChar = priceStr.slice(-1);
-            let digit = parseInt(lastChar, 10);
-            let tradeType = document.getElementById("tradeTypeSelect").value;
-            let advice = "Analyzing...";
-
-            if (!isNaN(digit)) {
-                switch (tradeType) {
-                    case "rise_fall":
-                        advice = digit >= 5 ? "Fall (Sell)" : "Rise (Buy)";
-                        break;
-                    case "even_odd":
-                        advice = digit % 2 === 0 ? "Even" : "Odd";
-                        break;
-                    case "over_under":
-                        advice = digit > 5 ? "Under" : "Over";
-                        break;
-                }
-            } else {
-                advice = "N/A";
-            }
-
-            document.getElementById("entry-advice").textContent = advice;
-        }
-
-        function calculateMarketProbability() {
-            let probability = Math.random() * 20 + 80;
-            document.getElementById("market-probability").textContent = probability.toFixed(2);
-        }
-
-        function executeTrade() {
-            let tradeAmount = parseFloat(document.getElementById("tradeAmount").value);
-            let targetProfit = parseFloat(document.getElementById("targetProfit").value);
-            let tradeType = document.getElementById("tradeTypeSelect").value;
-            let advice = document.getElementById("entry-advice").textContent;
-
-            let tradeTakenMessage = `Trade Taken: ${tradeType.replace("_", "/").toUpperCase()} - ${advice} ($${tradeAmount})`;
-            logTrade(tradeTakenMessage);
-
-            setTimeout(() => {
-                let win = Math.random() > 0.3;
-                let profit = win ? tradeAmount * 0.9 : -tradeAmount;
-                totalProfit += profit;
-
-                let resultMessage = win ? `Win ✅ +$${profit.toFixed(2)}` : `Loss ❌ -$${tradeAmount.toFixed(2)}`;
-                logTrade(resultMessage);
-
-                if (totalProfit >= targetProfit) {
-                    autoTrade = false;
-                    logTrade(`🎯 Target Profit Reached! Auto Trade Stopped.`);
-                }
-            }, 2000);
-        }
-
-        function toggleAutoTrade() {
-            autoTrade = !autoTrade;
-            logTrade(`Auto Trade: ${autoTrade ? "ON" : "OFF"}`);
-        }
-
-        function logTrade(message) {
-            document.getElementById("trade-log").innerHTML += `<p>${message}</p>`;
-        }
-
-        updateTradeInfo();
+        loadPage("dashboard.html")
     </script>
-    <script src="app.js"></script>
+    <script src="./js/app/deriv.js"></script>
+
 </body>
+
 </html>
