@@ -8,7 +8,6 @@
     <title>Focus - Bootstrap Admin Dashboard </title>
     <!-- Favicon icon -->
     <link rel="icon" type="image/png" sizes="16x16" href="./images/favicon.png">
-    <link href="./vendor/sweetalert2/dist/sweetalert2.min.css" rel="stylesheet">
     <link href="./css/style.css" rel="stylesheet">
 
 </head>
@@ -69,6 +68,7 @@
     <script src="./js/custom.min.js"></script>
     <script src="./vendor/sweetalert2/dist/sweetalert2.min.js"></script>
     <script src="./js/plugins-init/sweetalert.init.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         const base_url = "http://localhost:8080/"
     
@@ -79,17 +79,19 @@
             const loginButton = document.getElementById("loginButton")
             loginButton.disabled = true
             loginButton.textContent = "Logging in..."
+            const data = new URLSearchParams({
+                grant_type: "password",
+                username: document.getElementById('loginEmail').value,
+                password: document.getElementById('loginPassword').value,
+                scope: "",
+                client_id: 'string',
+                client_secret: 'string'
+            });
+            console.log(data.toString())
             try {
                 const response = await fetch(`${base_url}auth/token`, {
                     method: 'POST',
-                    // headers: {
-                    //     'accept': 'application/json',
-                    //     'Content-Type': 'application/x-www-form-urlencoded'
-                    // },
-                    body: new URLSearchParams({
-                        'username': document.getElementById('loginEmail').value,
-                        'password': document.getElementById('loginPassword').value
-                    }),
+                    body: data,
                     credentials: "include"
                 })
     
