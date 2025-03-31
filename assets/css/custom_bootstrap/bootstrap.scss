@@ -1,0 +1,96 @@
+// Import Bootstrap functions & variables
+@import "node_modules/bootstrap/scss/functions";
+@import "node_modules/bootstrap/scss/variables";
+
+// Custom Theme Colors
+$custom-colors-dark: (
+  "primary": #00aaff,
+  "secondary": #2e2e2e,
+  "success": #00cc00,
+  "warning": #ffaa00,
+  "danger": #ff4444,
+  "info": #8800ff,
+  "light": #e0e0e0,
+  "dark": #181818,
+  "muted": #888888
+);
+
+$custom-colors-light: (
+  "primary": #005f99,
+  "secondary": #f0f0f0,
+  "success": #008800,
+  "warning": #cc8800,
+  "danger": #cc0000,
+  "info": #6600cc,
+  "light": #ffffff,
+  "dark": #333333,
+  "muted": #555555
+);
+
+// Default to dark theme
+$theme-colors: map-merge($theme-colors, $custom-colors-dark);
+
+body {
+  background-color: map-get($theme-colors, "dark");
+  color: map-get($theme-colors, "light");
+}
+
+[data-theme="light"] {
+  $theme-colors: map-merge($theme-colors, $custom-colors-light) !global;
+  background-color: map-get($theme-colors, "light") !important;
+  color: map-get($theme-colors, "dark") !important;
+}
+
+// Navbar
+.navbar {
+  background-color: map-get($theme-colors, "dark") !important;
+  .navbar-brand, .nav-link {
+    color: map-get($theme-colors, "light") !important;
+  }
+  .nav-link:hover {
+    color: map-get($theme-colors, "primary") !important;
+  }
+}
+
+[data-theme="light"] .navbar {
+  background-color: map-get($theme-colors, "light") !important;
+  .navbar-brand, .nav-link {
+    color: map-get($theme-colors, "dark") !important;
+  }
+}
+
+// Buttons
+.btn-primary {
+  background-color: map-get($theme-colors, "primary");
+  &:hover {
+    background-color: darken(map-get($theme-colors, "primary"), 15%);
+  }
+}
+
+[data-theme="light"] .btn-primary {
+  background-color: map-get($theme-colors, "primary") !important;
+  &:hover {
+    background-color: darken(map-get($theme-colors, "primary"), 15%) !important;
+  }
+}
+
+// Scrollbar Styling
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: map-get($theme-colors, "dark");
+}
+::-webkit-scrollbar-thumb {
+  background: map-get($theme-colors, "primary");
+}
+
+[data-theme="light"] ::-webkit-scrollbar-track {
+  background: map-get($theme-colors, "light");
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: darken(map-get($theme-colors, "primary"), 10%);
+}
+
+// Import Bootstrap after custom styles
+@import "node_modules/bootstrap/scss/bootstrap";

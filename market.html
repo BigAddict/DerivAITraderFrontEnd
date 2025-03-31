@@ -1,0 +1,224 @@
+<style>
+  .scrollable-column {
+    max-height: 80vh; /* Adjust height as needed */
+    overflow-y: auto;
+  }
+  .trade-status-animate {
+        font-weight: bold;
+        text-emphasis-color: black;
+        animation: blink 2s infinite alternate;
+    }
+    @keyframes blink {
+        from { opacity: 1; }
+        to { opacity: 0.1; }
+    }
+</style>
+
+<div class="container" id="marketPage">
+    <div class="row">
+        <div class="col-md-4 scrollable-column">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Market</h5>
+                    <div class="row">
+                        <div class="col-auto">
+                            <label for="marketSelect" class="form-label align-bottom">Market:</label>
+                        </div>
+                        <div class="col-auto align-top">
+                            <select class="form-select" id="marketSelect">
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <input type="text" value="Loading...." class="form-control trade-status-animate text-center" id="activeMarket" disabled>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="askInput" class="form-label">Ask:</label>
+                            <input type="number" value="0" class="form-control text-center" id="askInput" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="quoteInput" class="form-label">Quote:</label>
+                            <input type="number" value="0" class="form-control text-center" id="quoteInput" disabled>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-md-6">
+                            <label for="bidInput" class="form-label">Bid:</label>
+                            <input type="number" value="0" class="form-control text-center" id="bidInput" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="pipSizeInput" class="form-label">Pip Size:</label>
+                            <input type="number" value="0" class="form-control text-center" id="pipSizeInput" disabled>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title">Trade</h5>
+                    <div class="mb-3">
+                        <label for="tradeTypeSelect" class="form-label">Trade type:</label>
+                        <select class="form-select" id="tradeTypeSelect">
+                            <option>Even/Odd</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="timeLeftInput" class="form-label">Time Left:</label>
+                        <input type="text" class="form-control text-center" id="timeLeftInput" disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Target Profit:</label>
+                        <div class="input-group">
+                            <button class="btn btn-outline-secondary" type="button" id="decreaseProfit">-</button>
+                            <input type="text" class="form-control text-center" id="targetProfit" value="10" min="1" max="200">
+                            <button class="btn btn-outline-secondary" type="button" id="increaseProfit">+</button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="entryAdviceInput" class="form-label">Entry Advice:</label>
+                        <input type="text" class="form-control" id="entryAdviceInput" disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label for="entryProbabilityInput" class="form-label">Entry Probability:</label>
+                        <input type="number" class="form-control" id="entryProbabilityInput" disabled>
+                    </div>
+                    <button class="btn btn-primary">Start Trader</button>
+                    <button class="btn btn-danger">Stop Trader</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Graph</h5>
+                    <p class="card-text">Graph goes here</p>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title">Session Trading Log</h5>
+                    <p class="card-text">Session Trading Log</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    let autoTrade = false, takeProfit = 0;
+
+    // Cache DOM elements
+    const marketSelect = document.getElementById("marketSelect");
+    const askInput = document.getElementById("askInput");
+    const quoteInput = document.getElementById("quoteInput");
+    const bidInput = document.getElementById("bidInput");
+    const pipSizeInput = document.getElementById("pipSizeInput");
+    const activeMarket = document.getElementById("activeMarket");
+    const tradeTypeSelect = document.getElementById("tradeTypeSelect");
+    const timeLeftInput = document.getElementById("timeLeftInput");
+    const targetProfit = document.getElementById("targetProfit");
+    const entryAdviceInput = document.getElementById("entryAdviceInput");
+    const entryProbabilityInput = document.getElementById("entryProbabilityInput");
+    const decreaseProfitBtn = document.getElementById("decreaseProfit");
+    const increaseProfitBtn = document.getElementById("increaseProfit");
+    
+        // Target Profit Button Functionality
+        decreaseProfitBtn.addEventListener("click", () => {
+            const currentValue = parseInt(targetProfit.value);
+            const minValue = parseInt(targetProfit.min);
+            if (currentValue > minValue) {
+                targetProfit.value = `${currentValue - 1}`;
+            }
+        });
+    
+        increaseProfitBtn.addEventListener("click", () => {
+            const currentValue = parseInt(targetProfit.value);
+            const maxValue = parseInt(targetProfit.max);
+            if (currentValue < maxValue) {
+                targetProfit.value = `${currentValue + 1}`;
+            }
+        });
+    // Time Left Timer Functionality
+    let timerInterval;
+    let timeLeft = 5;
+
+    const startTimer = () => {
+        clearInterval(timerInterval); // Clear any existing interval
+        timeLeft = 5; // Reset time
+        timeLeftInput.value = timeLeft;
+
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            timeLeftInput.value = timeLeft;
+            if (timeLeft <= 0) {
+                timeLeft = 5; // Restart timer
+                timeLeftInput.value = timeLeft;
+                // Optionally, trigger any action needed when timer restarts
+            }
+        }, 1000); // Update every second
+    };
+
+    // Initial call to start the timer when the script loads
+    startTimer();
+
+    const fetchTicks = async (market) => {
+        const ticksWs = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=69972");
+        ticksWs.onopen = () => ticksWs.send(JSON.stringify({ "ticks" : market}));
+        ticksWs.onmessage = (messageEvent) => {
+            const data = JSON.parse(messageEvent.data);
+            if (data.error) {
+                activeMarket.value = data.error.message;
+                console.log(`Market is closed: ${data.error.message}`);
+            } else if (data.tick) {
+                askInput.value = data.tick.ask;
+                bidInput.value = data.tick.bid;
+                quoteInput.value = data.tick.quote;
+                pipSizeInput.value = data.tick.pip_size;
+                activeMarket.value = data.tick.symbol;
+            } else {
+                console.log("Invalid tick data");
+            }
+        };
+    };
+    const updateMarketInfo = () => {
+        activeMarket.value = "Loading..."
+        fetchTicks(marketSelect.value);
+    };
+
+    const fetchMarkets = async () => {
+        const marketsWs = new WebSocket("wss://ws.binaryws.com/websockets/v3?app_id=69972");
+        marketsWs.onopen = () => marketsWs.send(JSON.stringify({ "active_symbols": "brief", "product_type": "basic" }));
+        marketsWs.onmessage = (messageEvent) => {
+            const data = JSON.parse(messageEvent.data);
+            if (data.active_symbols) {
+                // Clear existing options
+                marketSelect.innerHTML = "";
+
+                data.active_symbols.forEach(symbol => {
+                    const option = document.createElement("option");
+                    option.value = symbol.symbol;
+                    option.text = symbol.display_name;
+                    marketSelect.appendChild(option);
+                });
+
+                // Populate tradeTypeSelect with static options
+                tradeTypeSelect.innerHTML = `
+                    <option value="rise_fall">Rise/Fall</option>
+                    <option value="even_odd">Even/Odd</option>
+                    <option value="over_under">Over/Under</option>
+                `;
+                updateMarketInfo(); // Call updateMarketInfo after populating marketSelect
+            } else {
+                console.log("Invalid active_symbols data");
+            }
+        };
+    };
+    fetchMarkets();
+    marketSelect.addEventListener('change', () => {
+        updateMarketInfo();
+    });
+    // Removed initial updateMarketInfo call
+</script>
