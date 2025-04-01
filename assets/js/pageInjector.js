@@ -1,75 +1,110 @@
-// assets/js/pageInjector.js
-/**
- * Loads content from a specified page into the 'pageIndex' div and executes any JavaScript code within it.
- * Implements resource cleanup and error handling.
- * @param {string} pageName - The name of the page to load (e.g., "market.html").
- */
-async function loadPage(pageName) {
-  try {
-    const pageIndex = document.getElementById('pageIndex');
-
-    // 1. Cleanup Existing Resources (Crucial for Avoiding Conflicts)
-    cleanupPage(pageIndex);
-
-    // 2. Fetch and Inject the New HTML
-    const response = await fetch(pageName);
-    if (!response.ok) {
-      throw new Error(`Failed to load ${pageName}: ${response.status}`);
-    }
-    const html = await response.text();
-    pageIndex.innerHTML = html;
-
-    // 3. Execute Script Tags within the Loaded HTML
-    executeScripts(pageIndex);
-  } catch (error) {
-    console.error('Error loading page:', error);
-    document.getElementById('pageIndex').innerHTML = `<p>Error loading page: ${error.message}</p>`;
+class PageInjector {
+  constructor() {
+    this.currentPage = null;
+    this.currentScripts = [];
+    this.currentCleanupCallbacks = [];
   }
-}
 
-/**
- * Cleans up resources associated with the previously loaded page to prevent conflicts.
- * This includes removing script tags and any other event listeners or resources that
- * might be left behind.
- * @param {HTMLElement} pageIndex - The 'pageIndex' div element.
- */
-function cleanupPage(pageIndex) {
-  // 1. Remove Script Tags:  Important for preventing duplicate execution and conflicts.
-  const oldScripts = pageIndex.querySelectorAll('script');
-  oldScripts.forEach(script => {
-    script.remove(); // Removes the script tag from the DOM
-  });
-
-  // 2. Remove any dynamically added event listeners.  This is more challenging
-  //    because you need to know *which* event listeners were added. If you're using
-  //    a framework like React or Vue, this might be handled by the framework itself.
-  //    For simple cases, you might use data attributes to track listeners.
-  //  Example (requires that you've added a 'data-cleanup' attribute to elements):
-  const elementsToClean = pageIndex.querySelectorAll('[data-cleanup]');
-  elementsToClean.forEach(element => {
-    //Remove click events:
-    element.onclick = null
-  });
-
-
-  // 3.  If you're using any libraries that create global objects or modify the DOM
-  //     in a way that needs to be undone, you'll need to add code here to clean them up.
-  //     For example, if you're using a charting library, you might need to destroy the chart.
-  //     The exact cleanup steps will depend on the specific libraries you're using.
-}
-
-/**
- * Executes the script tags within the given HTML element.
- * This is necessary because simply setting `innerHTML` does not automatically execute scripts.
- * @param {HTMLElement} pageIndex - The 'pageIndex' div element.
- */
-function executeScripts(pageIndex) {
-  const scripts = pageIndex.getElementsByTagName('script');
-  for (let i = 0; i < scripts.length; i++) {
+  async loadPage(pageName) {
     try {
-      eval(scripts[i].innerText); // Execute the script
+      // Cleanup previous page
+      await this.cleanupCurrentPage();
+
+      // Show loading state
+      this.showLoadingState();
+
+      // Fetch new page
+      const response = await fetch(pageName);
+      if (!response.ok) throw new Error(`Failed to load ${pageName}`);
+      
+      const html = await response.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      
+      // Inject content
+      const pageIndex = document.getElementById('pageIndex');
+      pageIndex.innerHTML = doc.body.innerHTML;
+      
+      // Handle scripts
+      this.currentScripts = Array.from(doc.scripts);
+      await this.executeScripts();
+      
+      // Store cleanup callbacks if any
+      if (window.currentPageCleanup) {
+        this.currentCleanupCallbacks = window.currentPageCleanup;
+        delete window.currentPageCleanup;
+      }
+      
+      this.currentPage = pageName;
+      this.hideLoadingState();
+      
     } catch (error) {
-      console.error('Error executing script:', scripts[i], error);
+      console.error('Page load error:', error);
+      document.getElementById('pageIndex').innerHTML = `
+        <div class="alert alert-danger">
+          Error loading page: ${error.message}
+        </div>
+      `;
+      this.hideLoadingState();
     }
   }
+
+  async executeScripts() {
+    for (const script of this.currentScripts) {
+      try {
+        if (script.src) {
+          await this.loadExternalScript(script.src);
+        } else {
+          const newScript = document.createElement('script');
+          newScript.text = script.text;
+          document.body.appendChild(newScript);
+          document.body.removeChild(newScript);
+        }
+      } catch (error) {
+        console.error('Script execution error:', error);
+      }
+    }
+  }
+
+  loadExternalScript(src) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.body.appendChild(script);
+    });
+  }
+
+  async cleanupCurrentPage() {
+    // Run cleanup callbacks
+    for (const callback of this.currentCleanupCallbacks) {
+      try {
+        await callback();
+      } catch (error) {
+        console.error('Cleanup callback error:', error);
+      }
+    }
+    
+    // Clear scripts
+    this.currentScripts = [];
+    this.currentCleanupCallbacks = [];
+  }
+
+  showLoadingState() {
+    const pageIndex = document.getElementById('pageIndex');
+    pageIndex.innerHTML = `
+      <div class="d-flex justify-content-center align-items-center" style="height: 300px;">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    `;
+  }
+
+  hideLoadingState() {
+    // Could add transition effects here
+  }
 }
+
+export const pageInjector = new PageInjector();

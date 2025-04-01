@@ -1,16 +1,12 @@
 // src/app.js
+import { pageInjector } from '../assets/js/pageInjector.js';
+import { AppConstants } from './constants.js';
 //let backend_url; // Removed backend_url declaration
 
 // Removed loadConfig function
 
-// Ensure AppConstants is defined before using it
-if (typeof window.AppConstants === 'undefined' || !window.AppConstants.BACKEND_URL) {
-    console.error("AppConstants.BACKEND_URL is not defined. Please ensure src/constants.js is loaded before app.js.");
-    // You might want to display an error message to the user or take other appropriate action here.
-    throw new Error("Backend URL not defined. See console for details."); // Stop execution
-}
-
-const backend_url = window.AppConstants.BACKEND_URL; // Retrieve from AppConstants
+// Constants are now imported, no need for window check
+const backend_url = AppConstants.BACKEND_URL;
 console.log(`Using backend URL: ${backend_url}`); // Verify the URL
 async function checkOnline() {
     try {
@@ -95,36 +91,40 @@ checkAuth();
 
 
 document.addEventListener("DOMContentLoaded", function () {
-    let loaded_page = "";
     const dashboardNav = document.getElementById("dashboardNav");
     const marketNav = document.getElementById("marketNav");
-
     const dashboardLink = document.getElementById("dashboardLink");
     const marketLink = document.getElementById("marketLink");
 
-    if (loaded_page === "") {
-        loadPage("dashboard.html");
-        loaded_page = "dashboard.html";
-        dashboardNav.classList.add("active");
-        marketNav.classList.remove("active");
-    }
+    // Function to handle navigation and active state
+    const navigateTo = (pageName, activeNav, inactiveNav) => {
+        if (pageInjector.currentPage !== pageName) {
+            pageInjector.loadPage(pageName);
+            activeNav.classList.add("active");
+            inactiveNav.classList.remove("active");
+        }
+    };
+
+    // Initial page load
+    navigateTo("dashboard.html", dashboardNav, marketNav);
+
+    // Event listeners
     marketLink.addEventListener("click", function (e) {
         e.preventDefault();
-        if (loaded_page !== "market.html") {
-            loadPage("market.html");
-            loaded_page = "market.html";
-            dashboardNav.classList.remove("active");
-            marketNav.classList.add("active");
-        }
-    });
-    dashboardLink.addEventListener("click", function (e) {
-        e.preventDefault();
-        if (loaded_page !== "dashboard.html") {
-            loadPage("dashboard.html");
-            loaded_page = "dashboard.html";
-            dashboardNav.classList.add("active");
-            marketNav.classList.remove("active");
-        }
+        navigateTo("market.html", marketNav, dashboardNav);
     });
 
+    dashboardLink.addEventListener("click", function (e) {
+        e.preventDefault();
+        navigateTo("dashboard.html", dashboardNav, marketNav);
+    });
+
+    // Add logout listener if logout button exists
+    const logoutButton = document.getElementById('logoutButton'); // Assuming you have a logout button with this ID
+    if (logoutButton) {
+        logoutButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+        });
+    }
 });
