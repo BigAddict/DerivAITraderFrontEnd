@@ -27,6 +27,7 @@
             height: 3rem;
         }
     </style>
+    <script src="src/constants.js"></script>
 </head>
 
 <body class="h-100">
@@ -61,9 +62,7 @@
     <!-- SweetAlert JS -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        import { AppConstants } from 'src/constants.js';
-
-        const base_url = AppConstants.BACKEND_URL;
+        const base_url = window.AppConstants.BACKEND_URL;
         async function verifyEmail() {
             const urlParams = new URLSearchParams(window.location.search);
             const token = urlParams.get('token');

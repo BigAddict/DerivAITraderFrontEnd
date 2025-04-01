@@ -130,332 +130,335 @@
     </div>
   </div>
   
-  <script type="module">
-    import { stateManager } from './src/stateManager.js';
-    import WebSocketManager from './src/websocketManager.js';
-    import { CONFIG } from './src/constants.js'; // Assuming constants are moved
-
-    class TradingApp {
-      constructor() {
-        this.wsManager = new WebSocketManager(`${CONFIG.WS_URL}?app_id=${CONFIG.APP_ID}`);
-        this.timerInterval = null; // Added timer interval reference
-        this.init();
-      }
-
-      async init() {
-        this.registerCleanup();
-        this.initDOMReferences();
-        this.initEventListeners();
-        await this.connectWebSocket();
-        this.startTimer(); // Assuming timer is still needed
-      }
-
-      registerCleanup() {
-        window.currentPageCleanup = [
-          () => this.cleanup()
-        ];
-      }
-
-      initDOMReferences() {
-        this.elements = {
-          marketSelect: document.getElementById("marketSelect"),
-          askInput: document.getElementById("askInput"),
-          quoteInput: document.getElementById("quoteInput"),
-          bidInput: document.getElementById("bidInput"),
-          pipSizeInput: document.getElementById("pipSizeInput"),
-          activeMarket: document.getElementById("activeMarket"),
-          tradeTypeSelect: document.getElementById("tradeTypeSelect"),
-          timeLeftInput: document.getElementById("timeLeftInput"),
-          targetProfit: document.getElementById("targetProfit"),
-          entryAdviceInput: document.getElementById("entryAdviceInput"),
-          entryProbabilityInput: document.getElementById("entryProbabilityInput"),
-          decreaseProfitBtn: document.getElementById("decreaseProfit"),
-          increaseProfitBtn: document.getElementById("increaseProfit"),
-          startTraderBtn: document.getElementById("startTraderBtn"),
-          stopTraderBtn: document.getElementById("stopTraderBtn"),
-          tradingLog: document.getElementById("tradingLog"),
-          tradingGraph: document.getElementById("tradingGraph")
-          // ... other element references
-        };
-      }
-
-      initEventListeners() {
-        // Market Selection
-        this.elements.marketSelect.addEventListener('change', (e) => {
-          stateManager.updateState(state => ({
-            trading: { ...state.trading, currentMarket: e.target.value }
-          }));
-          this.updateMarketInfo(e.target.value); // Keep direct update for now
-        });
-
-        // Target Profit Adjustment
-        this.elements.decreaseProfitBtn.addEventListener('click', () => {
-          const currentValue = parseInt(this.elements.targetProfit.value);
-          const minValue = parseInt(this.elements.targetProfit.min);
-          if (currentValue > minValue) {
-            this.elements.targetProfit.value = currentValue - 1;
-            stateManager.updateState(state => ({
-              trading: { ...state.trading, settings: { ...state.trading.settings, targetProfit: currentValue - 1 } }
-            }));
-          }
-        });
-
-        this.elements.increaseProfitBtn.addEventListener('click', () => {
-          const currentValue = parseInt(this.elements.targetProfit.value);
-          const maxValue = parseInt(this.elements.targetProfit.max);
-          if (currentValue < maxValue) {
-            this.elements.targetProfit.value = currentValue + 1;
-            stateManager.updateState(state => ({
-              trading: { ...state.trading, settings: { ...state.trading.settings, targetProfit: currentValue + 1 } }
-            }));
-          }
-        });
-
-        // Target Profit Input Validation & State Update
-        this.elements.targetProfit.addEventListener('change', (e) => {
-          let value = parseInt(e.target.value);
-          const min = parseInt(e.target.min);
-          const max = parseInt(e.target.max);
-
-          if (isNaN(value)) value = min;
-          else if (value < min) value = min;
-          else if (value > max) value = max;
-
-          e.target.value = value; // Update input field
-          stateManager.updateState(state => ({
-            trading: { ...state.trading, settings: { ...state.trading.settings, targetProfit: value } }
-          }));
-        });
-
-        // Trade Type Selection
-        this.elements.tradeTypeSelect.addEventListener('change', (e) => {
-          stateManager.updateState(state => ({
-            trading: { ...state.trading, settings: { ...state.trading.settings, tradeType: e.target.value } }
-          }));
-        });
-
-        // Start/Stop Trader Buttons
-        this.elements.startTraderBtn.addEventListener('click', () => {
-          stateManager.updateState(state => ({
-            trading: { ...state.trading, active: true }
-          }));
-          this.logMessage("Auto trading started"); // Keep logging for now
-        });
-
-        this.elements.stopTraderBtn.addEventListener('click', () => {
-          stateManager.updateState(state => ({
-            trading: { ...state.trading, active: false }
-          }));
-          this.logMessage("Auto trading stopped"); // Keep logging for now
-        });
-      }
-
-      async connectWebSocket() {
-        try {
-          await this.wsManager.connect();
-          this.logMessage("WebSocket connected.");
+  <script>
+  // Configuration
+  const CONFIG = {
+    WS_URL: "wss://ws.binaryws.com/websockets/v3",
+    APP_ID: "69972",
+    TIMER_DURATION: 5
+  };
+  
+  // Trading Application
+  class TradingApp {
+    constructor() {
+      // State
+      this.state = {
+        autoTrade: false,
+        takeProfit: 0,
+        currentMarket: null,
+        timerInterval: null,
+        timeLeft: CONFIG.TIMER_DURATION,
+        wsConnection: null,
+        ticksSubscription: null
+      };
+  
+      // DOM Elements
+      this.elements = {
+        marketSelect: document.getElementById("marketSelect"),
+        askInput: document.getElementById("askInput"),
+        quoteInput: document.getElementById("quoteInput"),
+        bidInput: document.getElementById("bidInput"),
+        pipSizeInput: document.getElementById("pipSizeInput"),
+        activeMarket: document.getElementById("activeMarket"),
+        tradeTypeSelect: document.getElementById("tradeTypeSelect"),
+        timeLeftInput: document.getElementById("timeLeftInput"),
+        targetProfit: document.getElementById("targetProfit"),
+        entryAdviceInput: document.getElementById("entryAdviceInput"),
+        entryProbabilityInput: document.getElementById("entryProbabilityInput"),
+        decreaseProfitBtn: document.getElementById("decreaseProfit"),
+        increaseProfitBtn: document.getElementById("increaseProfit"),
+        startTraderBtn: document.getElementById("startTraderBtn"),
+        stopTraderBtn: document.getElementById("stopTraderBtn"),
+        tradingLog: document.getElementById("tradingLog"),
+        tradingGraph: document.getElementById("tradingGraph")
+      };
+  
+      // Initialize
+      this.initWebSocket();
+      this.initEventListeners();
+      this.startTimer();
+    }
+  
+    // Initialize WebSocket connection
+    initWebSocket() {
+      try {
+        this.state.wsConnection = new WebSocket(`${CONFIG.WS_URL}?app_id=${CONFIG.APP_ID}`);
+        
+        this.state.wsConnection.onopen = () => {
           this.fetchMarkets();
-          this.setupWebSocketListeners(); // Setup listeners after connection
-        } catch (error) {
-          console.error('WebSocket connection failed:', error);
-          this.logMessage("WebSocket connection failed. Check console.");
+        };
+        
+        this.state.wsConnection.onerror = (error) => {
+          console.error("WebSocket error:", error);
+          this.logMessage("Connection error. Trying to reconnect...");
+          setTimeout(() => this.initWebSocket(), 3000);
+        };
+        
+        this.state.wsConnection.onclose = () => {
+          this.logMessage("Connection closed. Reconnecting...");
+          setTimeout(() => this.initWebSocket(), 3000);
+        };
+      } catch (error) {
+        console.error("Failed to initialize WebSocket:", error);
+        this.logMessage("Failed to connect. Please refresh the page.");
+      }
+    }
+  
+    // Initialize event listeners
+    initEventListeners() {
+      this.elements.marketSelect.addEventListener('change', (e) => {
+        this.updateMarketInfo(e.target.value);
+      });
+  
+      this.elements.decreaseProfitBtn.addEventListener('click', () => {
+        const currentValue = parseInt(this.elements.targetProfit.value);
+        const minValue = parseInt(this.elements.targetProfit.min);
+        if (currentValue > minValue) {
+          this.elements.targetProfit.value = currentValue - 1;
         }
-      }
-
-      setupWebSocketListeners() {
-        // Handle market data (active symbols)
-        this.wsManager.subscribe('active_symbols', (data) => {
-          if (data.active_symbols) {
-            stateManager.updateState({ markets: data.active_symbols });
-            this.populateMarkets(data.active_symbols); // Update UI directly
-            this.populateTradeTypes(); // Update UI directly
-          } else if (data.error) {
-            this.logMessage(`Error fetching markets: ${data.error.message}`);
-          }
+      });
+  
+      this.elements.increaseProfitBtn.addEventListener('click', () => {
+        const currentValue = parseInt(this.elements.targetProfit.value);
+        const maxValue = parseInt(this.elements.targetProfit.max);
+        if (currentValue < maxValue) {
+          this.elements.targetProfit.value = currentValue + 1;
+        }
+      });
+  
+      this.elements.startTraderBtn.addEventListener('click', () => {
+        this.startTrading();
+      });
+  
+      this.elements.stopTraderBtn.addEventListener('click', () => {
+        this.stopTrading();
+      });
+  
+      // Validate target profit input
+      this.elements.targetProfit.addEventListener('change', (e) => {
+        const value = parseInt(e.target.value);
+        const min = parseInt(e.target.min);
+        const max = parseInt(e.target.max);
+        
+        if (isNaN(value)) {
+          e.target.value = min;
+        } else if (value < min) {
+          e.target.value = min;
+        } else if (value > max) {
+          e.target.value = max;
+        }
         });
-
-        // Handle tick data (will be managed per market selection)
-        // The subscription logic is moved to updateMarketInfo
+    }
+  
+    // Fetch available markets
+    fetchMarkets() {
+      if (!this.state.wsConnection || this.state.wsConnection.readyState !== WebSocket.OPEN) {
+        this.logMessage("Connection not ready. Retrying...");
+        setTimeout(() => this.fetchMarkets(), 1000);
+        return;
       }
-
-
-      fetchMarkets() {
-        // Request active symbols
-        this.wsManager.send(JSON.stringify({
+  
+      try {
+        this.state.wsConnection.send(JSON.stringify({
           "active_symbols": "brief",
           "product_type": "basic"
         }));
+  
+        this.state.wsConnection.onmessage = (messageEvent) => {
+          const data = JSON.parse(messageEvent.data);
+          
+          if (data.active_symbols) {
+            this.populateMarkets(data.active_symbols);
+            this.populateTradeTypes();
+          } else if (data.error) {
+            this.logMessage(`Error: ${data.error.message}`);
+          }
+        };
+      } catch (error) {
+        console.error("Error fetching markets:", error);
+        this.logMessage("Failed to load markets. Please refresh.");
       }
-
-      populateMarkets(markets) {
-        this.elements.marketSelect.innerHTML = ""; // Clear existing options
-        markets.forEach(symbol => {
-          const option = document.createElement("option");
-          option.value = symbol.symbol;
-          option.text = symbol.display_name;
-          this.elements.marketSelect.appendChild(option);
-        });
-
-        // Select the first market or the one from state if available
-        const currentMarket = stateManager.getState().trading.currentMarket;
-        if (currentMarket && markets.some(m => m.symbol === currentMarket)) {
-          this.elements.marketSelect.value = currentMarket;
-          this.updateMarketInfo(currentMarket);
-        } else if (markets.length > 0) {
-          this.elements.marketSelect.value = markets[0].symbol;
-          this.updateMarketInfo(markets[0].symbol);
-        }
+    }
+  
+    // Populate markets dropdown
+    populateMarkets(markets) {
+      this.elements.marketSelect.innerHTML = "";
+      
+      markets.forEach(symbol => {
+        const option = document.createElement("option");
+        option.value = symbol.symbol;
+        option.text = symbol.display_name;
+        this.elements.marketSelect.appendChild(option);
+      });
+  
+      // Select first market by default
+      if (markets.length > 0) {
+        this.updateMarketInfo(markets[0].symbol);
       }
-
-      populateTradeTypes() {
-        // Assuming trade types are static for now
-        this.elements.tradeTypeSelect.innerHTML = `
-          <option value="rise_fall">Rise/Fall</option>
-          <option value="even_odd" selected>Even/Odd</option>
-          <option value="over_under">Over/Under</option>
-        `;
-        // Set selected based on state
-        this.elements.tradeTypeSelect.value = stateManager.getState().trading.settings.tradeType;
+    }
+  
+    // Populate trade types dropdown
+    populateTradeTypes() {
+      this.elements.tradeTypeSelect.innerHTML = `
+        <option value="rise_fall">Rise/Fall</option>
+        <option value="even_odd" selected>Even/Odd</option>
+        <option value="over_under">Over/Under</option>
+      `;
+    }
+  
+    // Update market information
+    updateMarketInfo(market) {
+      if (!market) return;
+      
+      this.state.currentMarket = market;
+      this.elements.activeMarket.value = "Loading...";
+      
+      // Unsubscribe from previous ticks if exists
+      if (this.state.ticksSubscription) {
+        this.unsubscribeFromTicks();
       }
-
-      updateMarketInfo(marketSymbol) {
-        if (!marketSymbol) return;
-
-        this.elements.activeMarket.value = "Loading...";
-
-        // Unsubscribe from previous market's ticks
-        const previousMarket = stateManager.getState().trading.currentMarket;
-        if (previousMarket && previousMarket !== marketSymbol) {
-           this.wsManager.unsubscribe(`ticks_${previousMarket}`); // Assuming channel name format
-        }
-
-        // Update state
-         stateManager.updateState(state => ({
-            trading: { ...state.trading, currentMarket: marketSymbol }
-          }));
-
-
-        // Subscribe to new market's ticks
-        const tickChannel = `ticks_${marketSymbol}`; // Define a unique channel name
-        this.wsManager.subscribe(tickChannel, (data) => {
+      
+      this.subscribeToTicks(market);
+    }
+  
+    // Subscribe to ticks for a market
+    subscribeToTicks(market) {
+      if (!this.state.wsConnection || this.state.wsConnection.readyState !== WebSocket.OPEN) {
+        this.logMessage("Connection not ready. Retrying...");
+        setTimeout(() => this.subscribeToTicks(market), 1000);
+        return;
+      }
+  
+      try {
+        const subscribeMsg = JSON.stringify({ "ticks": market });
+        this.state.wsConnection.send(subscribeMsg);
+        
+        this.state.ticksSubscription = market;
+        
+        this.state.wsConnection.onmessage = (messageEvent) => {
+          const data = JSON.parse(messageEvent.data);
+          
           if (data.tick) {
             this.updateTickData(data.tick);
           } else if (data.error) {
             this.elements.activeMarket.value = data.error.message;
             this.logMessage(`Market error: ${data.error.message}`);
           }
-        });
-
-         // Send the actual tick subscription message
-         this.wsManager.send(JSON.stringify({ "ticks": marketSymbol, "subscribe": 1 })); // Ensure subscribe flag is sent
-      }
-
-       updateTickData(tick) {
-          this.elements.askInput.value = tick.ask;
-          this.elements.bidInput.value = tick.bid;
-          this.elements.quoteInput.value = tick.quote;
-          this.elements.pipSizeInput.value = tick.pip_size;
-          this.elements.activeMarket.value = tick.symbol; // Update active market display
-       }
-
-
-      // Timer functionality (assuming it's still needed)
-      startTimer() {
-        this.clearTimer();
-        let timeLeft = CONFIG.TIMER_DURATION; // Use local variable
-        this.elements.timeLeftInput.value = timeLeft;
-
-        this.timerInterval = setInterval(() => {
-          timeLeft--;
-          this.elements.timeLeftInput.value = timeLeft;
-
-          if (timeLeft <= 0) {
-            timeLeft = CONFIG.TIMER_DURATION; // Reset timer
-            this.onTimerComplete();
-          }
-        }, 1000);
-      }
-
-      clearTimer() {
-        if (this.timerInterval) {
-          clearInterval(this.timerInterval);
-          this.timerInterval = null;
-        }
-      }
-
-      onTimerComplete() {
-        if (stateManager.getState().trading.active) {
-          this.evaluateTrade();
-        }
-      }
-
-      evaluateTrade() {
-        // TODO: Implement actual trade evaluation logic based on state
-        const probability = Math.floor(Math.random() * 100); // Placeholder
-        this.elements.entryProbabilityInput.value = probability;
-
-        if (probability > 50) {
-          this.elements.entryAdviceInput.value = "BUY";
-          this.elements.entryAdviceInput.classList.add("text-success");
-          this.elements.entryAdviceInput.classList.remove("text-danger");
-        } else {
-          this.elements.entryAdviceInput.value = "SELL";
-          this.elements.entryAdviceInput.classList.add("text-danger");
-          this.elements.entryAdviceInput.classList.remove("text-success");
-        }
-      }
-
-      logMessage(message) {
-        const timestamp = new Date().toLocaleTimeString();
-        const logEntry = document.createElement("div");
-        logEntry.textContent = `[${timestamp}] ${message}`;
-        // Ensure log area is cleared if it becomes too large (optional)
-        if (this.elements.tradingLog.children.length > 100) {
-            this.elements.tradingLog.removeChild(this.elements.tradingLog.lastChild);
-        }
-        this.elements.tradingLog.prepend(logEntry); // Add new log to the top
-      }
-
-
-      cleanup() {
-        console.log("Cleaning up Market page resources...");
-        this.wsManager.close();
-        this.clearTimer();
-        // Any other specific cleanup for this page
+        };
+      } catch (error) {
+        console.error("Error subscribing to ticks:", error);
+        this.logMessage("Failed to subscribe to market data.");
       }
     }
-
-    // Initialize with state subscription
-    document.addEventListener('DOMContentLoaded', () => {
-      const tradingApp = new TradingApp();
-
-      // Subscribe to state changes for UI updates
-      stateManager.subscribe((state) => {
-        // Update button states based on trading activity
-        tradingApp.elements.startTraderBtn.disabled = state.trading.active;
-        tradingApp.elements.stopTraderBtn.disabled = !state.trading.active;
-
-        // Update target profit input if it differs from state
-        if (parseInt(tradingApp.elements.targetProfit.value) !== state.trading.settings.targetProfit) {
-            tradingApp.elements.targetProfit.value = state.trading.settings.targetProfit;
+  
+    // Unsubscribe from ticks
+    unsubscribeFromTicks() {
+      if (this.state.ticksSubscription && this.state.wsConnection && this.state.wsConnection.readyState === WebSocket.OPEN) {
+        try {
+          const unsubscribeMsg = JSON.stringify({ "forget": this.state.ticksSubscription });
+          this.state.wsConnection.send(unsubscribeMsg);
+          this.state.ticksSubscription = null;
+        } catch (error) {
+          console.error("Error unsubscribing from ticks:", error);
         }
-
-        // Update trade type dropdown if it differs from state
-         if (tradingApp.elements.tradeTypeSelect.value !== state.trading.settings.tradeType) {
-            tradingApp.elements.tradeTypeSelect.value = state.trading.settings.tradeType;
-         }
-
-        // Update market dropdown if it differs from state
-         if (state.trading.currentMarket && tradingApp.elements.marketSelect.value !== state.trading.currentMarket) {
-             // Check if the market exists in the dropdown before setting
-             const marketExists = Array.from(tradingApp.elements.marketSelect.options).some(opt => opt.value === state.trading.currentMarket);
-             if (marketExists) {
-                tradingApp.elements.marketSelect.value = state.trading.currentMarket;
-             }
-         }
-
-        // Potentially update other UI elements based on state changes
-        // e.g., update graph, display user info, etc.
-      });
+      }
+    }
+  
+    // Update UI with tick data
+    updateTickData(tick) {
+      this.elements.askInput.value = tick.ask;
+      this.elements.bidInput.value = tick.bid;
+      this.elements.quoteInput.value = tick.quote;
+      this.elements.pipSizeInput.value = tick.pip_size;
+      this.elements.activeMarket.value = tick.symbol;
+    }
+  
+    // Timer functionality
+    startTimer() {
+      this.clearTimer();
+      this.state.timeLeft = CONFIG.TIMER_DURATION;
+      this.elements.timeLeftInput.value = this.state.timeLeft;
+  
+      this.state.timerInterval = setInterval(() => {
+        this.state.timeLeft--;
+        this.elements.timeLeftInput.value = this.state.timeLeft;
+  
+        if (this.state.timeLeft <= 0) {
+          this.state.timeLeft = CONFIG.TIMER_DURATION;
+          this.onTimerComplete();
+        }
+      }, 1000);
+    }
+  
+    clearTimer() {
+      if (this.state.timerInterval) {
+        clearInterval(this.state.timerInterval);
+        this.state.timerInterval = null;
+      }
+    }
+  
+    onTimerComplete() {
+      if (this.state.autoTrade) {
+        this.evaluateTrade();
+      }
+    }
+  
+    // Trading controls
+    startTrading() {
+      this.state.autoTrade = true;
+      this.elements.startTraderBtn.disabled = true;
+      this.elements.stopTraderBtn.disabled = false;
+      this.logMessage("Auto trading started");
+    }
+  
+    stopTrading() {
+      this.state.autoTrade = false;
+      this.elements.startTraderBtn.disabled = false;
+      this.elements.stopTraderBtn.disabled = true;
+      this.logMessage("Auto trading stopped");
+    }
+  
+    evaluateTrade() {
+      // TODO: Implement trade evaluation logic
+      const probability = Math.floor(Math.random() * 100);
+      this.elements.entryProbabilityInput.value = probability;
+      
+      if (probability > 50) {
+        this.elements.entryAdviceInput.value = "BUY";
+        this.elements.entryAdviceInput.classList.add("text-success");
+        this.elements.entryAdviceInput.classList.remove("text-danger");
+      } else {
+        this.elements.entryAdviceInput.value = "SELL";
+        this.elements.entryAdviceInput.classList.add("text-danger");
+        this.elements.entryAdviceInput.classList.remove("text-success");
+      }
+    }
+  
+    // Log messages to trading log
+    logMessage(message) {
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = document.createElement("div");
+      logEntry.textContent = `[${timestamp}] ${message}`;
+      this.elements.tradingLog.prepend(logEntry);
+    }
+  
+    // Cleanup on destroy
+    destroy() {
+      this.clearTimer();
+      this.unsubscribeFromTicks();
+      if (this.state.wsConnection) {
+        this.state.wsConnection.close();
+      }
+    }
+  }
+  
+  // Initialize the application when DOM is loaded
+  document.addEventListener('DOMContentLoaded', () => {
+    const tradingApp = new TradingApp();
+    
+    // Cleanup before page unload
+    window.addEventListener('beforeunload', () => {
+      tradingApp.destroy();
     });
+  });
   </script>
