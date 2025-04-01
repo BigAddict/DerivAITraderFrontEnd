@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en" class="h-100">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Deriv AI Trader - Email Verification</title>
+    <!-- Favicon icon -->
+    <link rel="icon" type="image/png" sizes="16x16" href="./images/favicon.png">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+    <style>
+        .verification-container {
+            max-width: 400px;
+            margin: auto;
+            margin-top: 50px;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+    </style>
+    <script src="src/constants.js"></script>
+</head>
+
+<body class="h-100">
+    <div class="container h-100">
+        <div class="row justify-content-center align-items-center h-100">
+            <div class="verification-container">
+                <h3 class="text-center mb-4">Email Verification</h3>
+
+                <div id="loadingContainer">
+                    <p>Verifying your email...</p>
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+
+                <div class="alert alert-success alert-dismissible fade show d-none" role="alert" id="successAlert">
+                    Email verified successfully! You can now login.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+
+                <div class="alert alert-danger alert-dismissible fade show d-none" role="alert" id="errorAlert">
+                    <span id="errorMessage">Verification failed.</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- SweetAlert JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        const base_url = window.AppConstants.BACKEND_URL;
+        async function verifyEmail() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            if (!token) {
+                document.getElementById('errorMessage').textContent = 'Invalid verification link';
+                document.getElementById('errorAlert').classList.remove('d-none');
+                document.getElementById('loadingContainer').style.display = 'none';
+                return;
+            }
+            try {
+                const response = await fetch(`${base_url}users/verify-email?token=${token}`, {
+                    method: 'POST',
+                    headers: {
+                        'accept': 'application/json'
+                    }
+                });
+                if (response.ok) {
+                    document.getElementById('successAlert').classList.remove('d-none');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 3000);
+                } else {
+                    const data = await response.json();
+                    document.getElementById('errorMessage').textContent = data.detail || 'Verification failed';
+                    document.getElementById('errorAlert').classList.remove('d-none');
+                }
+            } catch (error) {
+                document.getElementById('errorMessage').textContent = 'Server error! Please try again later.';
+                document.getElementById('errorAlert').classList.remove('d-none');
+            }
+            document.getElementById('loadingContainer').style.display = 'none';
+        }
+
+        // Start verification when page loads
+        window.onload = verifyEmail;
+    </script>
+</body>
+
+</html>

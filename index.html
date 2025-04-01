@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
+    <script src="src/constants.js"></script>
     <!-- Fonts and icons -->
     <script src="assets/js/plugin/webfont/webfont.min.js"></script>
     <script>
@@ -67,23 +68,23 @@
         <div class="sidebar-wrapper scrollbar scrollbar-inner" id="sidebar">
           <div class="sidebar-content">
             <ul class="nav nav-secondary">
-              <li class="nav-item active">
+              <li class="nav-item active" id="dashboardNav">
                 <a
                   data-bs-toggle="collapse"
                   href="#dashboard"
                   class="collapsed"
                   aria-expanded="false"
-                  onclick="loadPage('dashboard.html')"
+                  id="dashboardLink"
                 >
                   <i class="fas fa-home"></i>
                   <p class="text-white">Dashboard</p>
                 </a>
               </li>
-              <li class="nav-item">
+              <li class="nav-item" id="marketNav">
                 <a
                   href="#"
                   aria-expanded="false"
-                  onclick="loadPage('market.html')"
+                  id="marketLink"
                 >
                   <i class="fas fa-chart-line"></i>
                   <p class="">Markets</p>

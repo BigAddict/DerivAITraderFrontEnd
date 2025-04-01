@@ -22,6 +22,7 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
     </style>
+    <script src="src/constants.js"></script>
 </head>
 
 <body class="h-100">
@@ -62,7 +63,7 @@
     <!-- SweetAlert JS -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        const base_url = "http://localhost:8080/"
+        const base_url = window.AppConstants.BACKEND_URL
 
         const loginForm = document.getElementById("loginForm")
 
@@ -118,6 +119,7 @@
                 loginButton.textContent = "Login"
             }
         })
+        console.log(window.AppConstants.BACKEND_URL)
     </script>
 </body>
 

@@ -59,13 +59,13 @@
     </div>
 </div>
 <script>
-  const backend_url = "http://localhost:8080";
+  const backend_url = window.AppConstants.BACKEND_URL;
 
   async function populateDashboard() {
     const derivAccounts = document.getElementById('derivAccounts');
 
     try {
-        const response = await fetch("http://localhost:8080/deriv/account-info", {
+        const response = await fetch(`${backend_url}deriv/account-info`, {
             method: "GET",
             credentials: "include"
         })
