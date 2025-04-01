@@ -14,7 +14,7 @@ const backend_url = window.AppConstants.BACKEND_URL; // Retrieve from AppConstan
 console.log(`Using backend URL: ${backend_url}`); // Verify the URL
 async function checkOnline() {
     try {
-        const response = await fetch(`${backend_url}/`, {
+        const response = await fetch(`${backend_url}`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -34,7 +34,7 @@ checkOnline();
 
 async function checkAuth() {
     try {
-        const response = await fetch(`${backend_url}/users/me`, {
+        const response = await fetch(`${backend_url}users/me`, {
             method: 'POST',
             credentials: 'include' // Include cookies in request
 });
