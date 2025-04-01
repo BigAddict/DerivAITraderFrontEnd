@@ -42,7 +42,7 @@ async function checkAuth() {
         if (response.status === 401) {
             // Not authorized, redirect to login with error message
             const error = await response.json();
-            window.location.href = `/login.html?error=${encodeURIComponent(error.detail || 'Not Authorized')}`;
+            // window.location.href = `/login.html?error=${encodeURIComponent(error.detail || 'Not Authorized')}`;
             console.log(error);
             return false;
         }
@@ -71,7 +71,7 @@ async function checkAuth() {
 
     } catch (error) {
         console.error('Auth check failed:', error);
-        window.location.href = `/login.html?error=${encodeURIComponent(error.message)}`;
+        // window.location.href = `/login.html?error=${encodeURIComponent(error.message)}`;
         return false;
     }
 }
