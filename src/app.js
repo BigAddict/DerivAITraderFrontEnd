@@ -30,8 +30,6 @@ async function checkOnline() {
         }
     }
 
-checkOnline();
-
 async function checkAuth() {
     try {
         const response = await fetch(`${backend_url}users/me`, {
@@ -42,7 +40,7 @@ async function checkAuth() {
         if (response.status === 401) {
             // Not authorized, redirect to login with error message
             const error = await response.json();
-            // window.location.href = `/login.html?error=${encodeURIComponent(error.detail || 'Not Authorized')}`;
+            window.location.href = `/login.html?error=${encodeURIComponent(error.detail || 'Not Authorized')}`;
             console.log(error);
             return false;
         }
@@ -71,12 +69,30 @@ async function checkAuth() {
 
     } catch (error) {
         console.error('Auth check failed:', error);
-        // window.location.href = `/login.html?error=${encodeURIComponent(error.message)}`;
+        window.location.href = `/login.html?error=${encodeURIComponent(error.message)}`;
         return false;
     }
 }
 
+function logout() {
+    fetch(`${backend_url}users/logout`, {
+        method: 'POST',
+        credentials: 'include' // Include cookies in request
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Logout failed');
+        }
+        window.location.href = '/login.html';
+    })
+    .catch(error => {
+        console.error('Logout error:', error);
+    });
+}
+
+checkOnline();
 checkAuth();
+
 
 document.addEventListener("DOMContentLoaded", function () {
     let loaded_page = "";

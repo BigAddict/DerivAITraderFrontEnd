@@ -71,7 +71,11 @@
         })
 
         if (!response.ok) {
-            console.log("Error fetching account info")
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td colspan="3" class="text-center">No linked accounts found.</td>
+            `;
+            derivAccounts.appendChild(row);
             return;
         }
 
